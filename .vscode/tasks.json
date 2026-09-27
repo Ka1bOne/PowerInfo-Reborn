@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build & Run PowerInfo Reborn",
+            "type": "shell",
+            "command": "./Scripts/run.sh",
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": ["$swiftc"]
+        },
+        {
+            "label": "Build App Bundle",
+            "type": "shell",
+            "command": "./Scripts/build.sh",
+            "group": "build",
+            "problemMatcher": ["$swiftc"]
+        }
+    ]
+}
