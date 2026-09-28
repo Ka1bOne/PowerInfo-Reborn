@@ -1,5 +1,7 @@
 # PowerInfo Reborn
 
+# The original MacOS app has been reborn!
+
 PowerInfo Reborn is a small macOS menu bar app. It shows a popup whenever your Mac's power state changes, for example when you plug in the charger, unplug it, or turn Low Power Mode on or off.
 
 It sits in the menu bar as "PIR". Clicking it gives you Settings, About and Quit.
