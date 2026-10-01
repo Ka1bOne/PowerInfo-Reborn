@@ -12,7 +12,7 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
         }
         .padding(.top, 10)
-        .frame(width: 580, height: 600)
+        .frame(width: 580, height: 640)
     }
 }
 
@@ -191,8 +191,24 @@ private struct EventsTab: View {
                     }
                 }
                 .disabled(!prefs.isEnabled(.lowBattery))
+                LabeledContent("Warn when charger is under") {
+                    HStack {
+                        Slider(
+                            value: Binding(
+                                get: { Double(prefs.slowChargerThreshold) },
+                                set: { prefs.slowChargerThreshold = Int($0) }
+                            ),
+                            in: 15...100, step: 5
+                        )
+                        .frame(width: 160)
+                        Text("\(prefs.slowChargerThreshold)W")
+                            .monospacedDigit()
+                            .frame(width: 40, alignment: .trailing)
+                    }
+                }
+                .disabled(!prefs.isEnabled(.slowCharger))
             } header: {
-                Text("Low Battery")
+                Text("Warning Levels")
             }
 
             Section("Sound") {

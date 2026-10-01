@@ -59,7 +59,11 @@ final class PopupModel: ObservableObject {
     var isVisible: Bool { phase != .hidden }
     var subtitle: String { payload.subtitle }
     var accent: Color { payload.event.accent(colorStyle) }
-    var batteryTint: Color { payload.snapshot.batteryTint(colorStyle) }
+    var batteryTint: Color {
+        // The warning level is user-set and can sit above the gauge's own red zone.
+        if payload.event == .lowBattery && colorStyle == .vibrant { return .red }
+        return payload.snapshot.batteryTint(colorStyle)
+    }
 }
 
 enum PopupPhase {
@@ -96,7 +100,10 @@ struct BatteryGauge: View {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: height * 0.58, weight: .heavy))
                         .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.35), radius: 1.5)
+                        // A tight dark outline, so the bolt still shows over an empty
+                        // gauge on the Light look and over a white fill in monochrome.
+                        .shadow(color: .black.opacity(0.75), radius: height * 0.03)
+                        .shadow(color: .black.opacity(0.75), radius: height * 0.03)
                         .frame(maxWidth: .infinity)
                         .transition(.scale.combined(with: .opacity))
                 }

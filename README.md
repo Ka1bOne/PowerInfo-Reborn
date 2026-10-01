@@ -16,6 +16,7 @@ Popups for these events, each of which can be turned on or off:
 - Low Power Mode turned off
 - Battery fully charged
 - Battery low (you choose the level)
+- Slow charger connected (you choose the wattage)
 
 Three popup styles:
 

@@ -21,6 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         monitor.start()
 
         monitor.$snapshot
+            .sink { PopupController.shared.refresh(snapshot: $0) }
+            .store(in: &cancellables)
+
+        monitor.$snapshot
             .combineLatest(Preferences.shared.$showPercentInMenuBar)
             .sink { [weak self] snapshot, showPercent in self?.updateTitle(snapshot, showPercent) }
             .store(in: &cancellables)

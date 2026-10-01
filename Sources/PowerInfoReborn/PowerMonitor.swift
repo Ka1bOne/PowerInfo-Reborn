@@ -14,10 +14,12 @@ final class PowerMonitor: ObservableObject {
     private var runLoopSource: CFRunLoopSource?
     private var refreshTimer: Timer?
     private var lowBatteryWarned = false
+    private var slowChargerWarned = false
 
     func start() {
         snapshot = Self.read()
         lowBatteryWarned = !snapshot.isPluggedIn && snapshot.percent <= Preferences.shared.lowBatteryThreshold
+        slowChargerWarned = snapshot.isSlowCharger(below: Preferences.shared.slowChargerThreshold)
 
         let context = Unmanaged.passUnretained(self).toOpaque()
         if let source = IOPSNotificationCreateRunLoopSource({ context in
@@ -46,9 +48,19 @@ final class PowerMonitor: ObservableObject {
         let new = Self.read()
         snapshot = new
 
+        let prefs = Preferences.shared
+
         // Several things can change at once (e.g. unplugging below the low-battery
-        // threshold); only the most important one gets a popup.
+        // threshold); only the most important one that's switched on gets a popup.
         var events: [PowerEvent] = []
+        // The adapter's wattage often arrives a moment after the plug-in itself,
+        // so this is tracked separately from the plugged-in change.
+        if !new.isSlowCharger(below: prefs.slowChargerThreshold) {
+            slowChargerWarned = false
+        } else if !slowChargerWarned {
+            slowChargerWarned = true
+            events.append(.slowCharger)
+        }
         if old.isPluggedIn != new.isPluggedIn {
             events.append(new.isPluggedIn ? .pluggedIn : .unplugged)
         }
@@ -58,7 +70,7 @@ final class PowerMonitor: ObservableObject {
         if new.hasBattery && new.isFull && !old.isFull && old.isPluggedIn {
             events.append(.fullyCharged)
         }
-        let threshold = Preferences.shared.lowBatteryThreshold
+        let threshold = prefs.lowBatteryThreshold
         if new.isPluggedIn || new.percent > threshold {
             lowBatteryWarned = false
         } else if new.hasBattery && !lowBatteryWarned {
@@ -66,7 +78,7 @@ final class PowerMonitor: ObservableObject {
             events.append(.lowBattery)
         }
 
-        if let event = events.first { onEvent?(event, new) }
+        if let event = events.first(where: prefs.isEnabled) { onEvent?(event, new) }
     }
 
     static func read() -> PowerSnapshot {

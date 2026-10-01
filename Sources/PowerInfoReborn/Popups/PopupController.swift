@@ -52,13 +52,23 @@ final class PopupController {
     private var configKey = ""
     /// Bumped on every show; delayed animation steps from older shows bail out.
     private var generation = 0
+    /// False for previews, whose snapshot is made up and shouldn't track the real one.
+    private var followsLiveState = false
 
     /// Called by the power monitor for real events.
     func handle(_ event: PowerEvent, snapshot: PowerSnapshot) {
         let prefs = Preferences.shared
         guard prefs.isEnabled(event) else { return }
         if prefs.playSound { SoundPlayer.play(prefs.soundName) }
-        show(PopupPayload(event: event, snapshot: snapshot))
+        show(PopupPayload(event: event, snapshot: snapshot), live: true)
+    }
+
+    /// Keeps a popup that's still on screen in step with the live state. IOKit
+    /// reports the plug-in first and the adapter's wattage and charging state a
+    /// moment later, which would otherwise leave the popup showing "Not charging".
+    func refresh(snapshot: PowerSnapshot) {
+        guard followsLiveState, model.phase != .hidden, model.payload.snapshot != snapshot else { return }
+        withAnimation(.smooth(duration: 0.35)) { model.payload.snapshot = snapshot }
     }
 
     /// Shows a popup from the current live state, for the Settings preview buttons.
@@ -76,13 +86,18 @@ final class PopupController {
         case .lowBattery:
             shown.isPluggedIn = false; shown.isCharging = false
             shown.percent = min(snap.percent, Preferences.shared.lowBatteryThreshold)
+        case .slowCharger:
+            let threshold = Preferences.shared.slowChargerThreshold
+            shown.isPluggedIn = true; shown.isCharging = !snap.isFull
+            if !shown.isSlowCharger(below: threshold) { shown.adapterWatts = min(20, threshold - 5) }
         }
         if Preferences.shared.playSound { SoundPlayer.play(Preferences.shared.soundName) }
         show(PopupPayload(event: event, snapshot: shown), style: style)
     }
 
-    private func show(_ payload: PopupPayload, style overrideStyle: PopupStyle? = nil) {
+    private func show(_ payload: PopupPayload, style overrideStyle: PopupStyle? = nil, live: Bool = false) {
         let prefs = Preferences.shared
+        followsLiveState = live
         let style = overrideStyle ?? prefs.style
         let screens = targetScreens(prefs.displayTarget)
         let key = ([style.rawValue, prefs.size.rawValue] + screens.map { NSStringFromRect($0.frame) })

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Something that happened to the Mac's power state and may deserve a popup.
 enum PowerEvent: String, CaseIterable, Identifiable {
-    case pluggedIn, unplugged, lowPowerOn, lowPowerOff, fullyCharged, lowBattery
+    case pluggedIn, unplugged, lowPowerOn, lowPowerOff, fullyCharged, lowBattery, slowCharger
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum PowerEvent: String, CaseIterable, Identifiable {
         case .lowPowerOff: return "Low Power Off"
         case .fullyCharged: return "Fully Charged"
         case .lowBattery: return "Low Battery"
+        case .slowCharger: return "Slow Charger"
         }
     }
 
@@ -25,6 +26,7 @@ enum PowerEvent: String, CaseIterable, Identifiable {
         case .lowPowerOff: return "Low Power Mode turned off"
         case .fullyCharged: return "Battery fully charged"
         case .lowBattery: return "Battery running low"
+        case .slowCharger: return "Slow charger connected"
         }
     }
 
@@ -36,6 +38,7 @@ enum PowerEvent: String, CaseIterable, Identifiable {
         case .lowPowerOff: return "hare.fill"
         case .fullyCharged: return "battery.100percent.bolt"
         case .lowBattery: return "battery.25percent"
+        case .slowCharger: return "bolt.trianglebadge.exclamationmark.fill"
         }
     }
 
@@ -43,7 +46,7 @@ enum PowerEvent: String, CaseIterable, Identifiable {
         guard style == .vibrant else { return .primary }
         switch self {
         case .pluggedIn, .fullyCharged: return .green
-        case .unplugged: return .orange
+        case .unplugged, .slowCharger: return .orange
         case .lowPowerOn: return .yellow
         case .lowPowerOff: return .cyan
         case .lowBattery: return .red
@@ -71,6 +74,12 @@ struct PowerSnapshot: Equatable {
         if isPluggedIn { return .green }
         if percent <= 20 { return .red }
         return .primary
+    }
+
+    /// Whether the connected adapter supplies less than `watts`.
+    func isSlowCharger(below watts: Int) -> Bool {
+        guard hasBattery, isPluggedIn, let adapterWatts, adapterWatts > 0 else { return false }
+        return adapterWatts < watts
     }
 
     var sourceText: String {
@@ -126,6 +135,9 @@ struct PopupPayload: Equatable {
             return "Ready to unplug"
         case .lowBattery:
             return "Plug in soon"
+        case .slowCharger:
+            if let w = s.adapterWatts { return "\(w)W · Charging slowly" }
+            return "Charging slowly"
         }
     }
 }

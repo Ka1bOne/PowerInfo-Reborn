@@ -92,9 +92,10 @@ final class Preferences: ObservableObject {
     @Published var playSound = true { didSet { save(playSound, "playSound") } }
     @Published var soundName = "Pop" { didSet { save(soundName, "soundName") } }
     @Published var lowBatteryThreshold = 20 { didSet { save(lowBatteryThreshold, "lowBatteryThreshold") } }
+    @Published var slowChargerThreshold = 30 { didSet { save(slowChargerThreshold, "slowChargerThreshold") } }
     @Published var showPercentInMenuBar = false { didSet { save(showPercentInMenuBar, "showPercentInMenuBar") } }
     @Published var enabledEvents: Set<PowerEvent> = Set(PowerEvent.allCases) {
-        didSet { save(enabledEvents.map(\.rawValue).sorted(), "enabledEvents") }
+        didSet { save(PowerEvent.allCases.filter { !enabledEvents.contains($0) }.map(\.rawValue), "disabledEvents") }
     }
 
     private init() { load() }
@@ -122,13 +123,15 @@ final class Preferences: ObservableObject {
         playSound = true
         soundName = "Pop"
         lowBatteryThreshold = 20
+        slowChargerThreshold = 30
         showPercentInMenuBar = false
         enabledEvents = Set(PowerEvent.allCases)
     }
 
     private static let keys = [
         "style", "size", "displayTarget", "colorStyle", "look", "duration", "reduceMotion",
-        "playSound", "soundName", "lowBatteryThreshold", "showPercentInMenuBar", "enabledEvents",
+        "playSound", "soundName", "lowBatteryThreshold", "slowChargerThreshold", "showPercentInMenuBar",
+        "enabledEvents", "disabledEvents",
     ]
 
     private func load() {
@@ -143,8 +146,15 @@ final class Preferences: ObservableObject {
         if d.object(forKey: "playSound") != nil { playSound = d.bool(forKey: "playSound") }
         if let v = d.string(forKey: "soundName") { soundName = v }
         if d.object(forKey: "lowBatteryThreshold") != nil { lowBatteryThreshold = d.integer(forKey: "lowBatteryThreshold") }
+        if d.object(forKey: "slowChargerThreshold") != nil { slowChargerThreshold = d.integer(forKey: "slowChargerThreshold") }
         if d.object(forKey: "showPercentInMenuBar") != nil { showPercentInMenuBar = d.bool(forKey: "showPercentInMenuBar") }
-        if let v = d.stringArray(forKey: "enabledEvents") { enabledEvents = Set(v.compactMap(PowerEvent.init)) }
+        // Stored as the events switched off, so ones added in later versions start on.
+        if let v = d.stringArray(forKey: "disabledEvents") {
+            enabledEvents = Set(PowerEvent.allCases).subtracting(v.compactMap(PowerEvent.init))
+        } else if let v = d.stringArray(forKey: "enabledEvents") {
+            // Older versions stored the events switched on, before Slow Charger existed.
+            enabledEvents = Set(v.compactMap(PowerEvent.init)).union([.slowCharger])
+        }
     }
 
     private func save(_ value: Any, _ key: String) { defaults.set(value, forKey: key) }

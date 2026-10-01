@@ -6,8 +6,11 @@ cd "${0:A:h}/.."
 APP="build/PowerInfo Reborn.app"
 ICON="build/AppIcon.icns"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/PowerInfoReborn"
+# Universal binary so it runs on both Apple silicon and Intel Macs.
+ARCHS=(--arch arm64 --arch x86_64)
+swift build -c release "${ARCHS[@]}" 2>&1 | grep -vE "^\[|x86_64 architecture is deprecated|ld: warning" || true
+BIN="$(swift build -c release "${ARCHS[@]}" --show-bin-path)/PowerInfoReborn"
+[[ -x "$BIN" ]] || { echo "Build failed"; exit 1; }
 
 if [[ ! -f "$ICON" || Scripts/make_icon.swift -nt "$ICON" ]]; then
     echo "Rendering app icon…"
@@ -24,6 +27,8 @@ fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/PowerInfoReborn"
+# Drop debug symbols, which contain local build paths.
+strip -S -x "$APP/Contents/MacOS/PowerInfoReborn"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp "$ICON" "$APP/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$APP" >/dev/null

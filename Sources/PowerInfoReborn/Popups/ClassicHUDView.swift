@@ -26,15 +26,16 @@ struct ClassicHUDView: View {
                     .minimumScaleFactor(0.8)
             }
 
-            HStack(spacing: 8) {
-                BatteryGauge(
-                    percent: snap.percent, tint: model.batteryTint,
-                    charging: snap.isPluggedIn && !snap.isFull, active: model.gaugeFilled,
-                    width: 50, height: 23
-                )
-                PercentText(percent: snap.percent, size: 17)
+            if snap.hasBattery {
+                HStack(spacing: 8) {
+                    BatteryGauge(
+                        percent: snap.percent, tint: model.batteryTint,
+                        charging: snap.isPluggedIn && !snap.isFull, active: model.gaugeFilled,
+                        width: 50, height: 23
+                    )
+                    PercentText(percent: snap.percent, size: 17)
+                }
             }
-            .opacity(snap.hasBattery ? 1 : 0)
         }
         .padding(18)
         .frame(width: 210, height: 210)
