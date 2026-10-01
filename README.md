@@ -40,19 +40,7 @@ Other settings:
 ## Requirements
 
 - macOS 14 or later. The glass look uses the system glass effect on macOS 26 and later, and a blurred background on older versions.
-- Xcode or the Xcode Command Line Tools to build it.
-
-## Building
-
-```sh
-./Scripts/run.sh     # build and launch
-./Scripts/build.sh   # build only
-```
-
-The app is created at `build/PowerInfo Reborn.app`. Move it to your Applications folder if you want to keep it.
-
-In VS Code you can also use Terminal > Run Build Task.
-
+  
 ## License
 
 Copyright (c) 2026 Ka1bOne
