@@ -4,7 +4,7 @@
 
 PowerInfo Reborn is a small macOS menu bar app. It shows a popup whenever your Mac's power state changes, for example when you plug in the charger, unplug it, or turn Low Power Mode on or off.
 
-It sits in the menu bar as "PIR". Clicking it gives you Settings, About and Quit.
+It sits in the menu bar as "PIR". Clicking it opens a panel with detailed information about the connected charger. Right-click it for Settings, About and Quit.
 
 ## Features
 
@@ -17,6 +17,15 @@ Popups for these events, each of which can be turned on or off:
 - Battery fully charged
 - Battery low (you choose the level)
 - Slow charger connected (you choose the wattage)
+
+Charger details, shown when you click PIR in the menu bar:
+
+- Charger: name, manufacturer, model, connection type, rated wattage, the negotiated voltage and current, the active USB Power Delivery profile, every power profile the charger offers, serial number, hardware and firmware versions, and more
+- Power: live input power, voltage and current, how hard the charger is working, power going into or out of the battery, system load and adapter losses, and why charging is slow or paused
+- Battery: charge in mAh, capacity compared to new, cycle count, voltage, current and temperature
+- A Copy button that copies everything as text
+
+What's shown depends on the Mac and charger; anything macOS doesn't report is left out.
 
 Three popup styles:
 

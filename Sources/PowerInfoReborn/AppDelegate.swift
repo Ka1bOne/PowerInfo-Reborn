@@ -3,8 +3,10 @@ import Combine
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem!
+    private var statusMenu: NSMenu!
+    private var popover: NSPopover!
     private var settingsWindow: NSWindow?
     private var aboutWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
@@ -31,6 +33,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // `--preview <style>` shows a popup on launch (handy for testing).
         let args = CommandLine.arguments
+        if args.contains("--charger-info") {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.6))
+                self.showChargerInfo()
+            }
+        }
         if let i = args.firstIndex(of: "--preview") {
             let style = args.indices.contains(i + 1) ? PopupStyle(rawValue: args[i + 1]) : nil
             Task { @MainActor in
@@ -46,13 +54,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.font = NSFont.systemFont(ofSize: 11, weight: .bold)
         statusItem.button?.toolTip = "PowerInfo Reborn"
+        // Left click shows the charger details; right click (or control-click) the menu.
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusItemClicked(_:))
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
 
-        let menu = NSMenu()
-        menu.addItem(item("Settings…", #selector(openSettings), key: ","))
-        menu.addItem(item("About PowerInfo Reborn", #selector(openAbout)))
-        menu.addItem(.separator())
-        menu.addItem(item("Quit PowerInfo Reborn", #selector(quit), key: "q"))
-        statusItem.menu = menu
+        statusMenu = NSMenu()
+        statusMenu.addItem(item("Settings…", #selector(openSettings), key: ","))
+        statusMenu.addItem(item("About PowerInfo Reborn", #selector(openAbout)))
+        statusMenu.addItem(.separator())
+        statusMenu.addItem(item("Quit PowerInfo Reborn", #selector(quit), key: "q"))
+
+        let host = NSHostingController(rootView: ChargerInfoView(
+            model: ChargerInfoModel.shared,
+            onSettings: { [weak self] in self?.popover.performClose(nil); self?.openSettings() },
+            onAbout: { [weak self] in self?.popover.performClose(nil); self?.openAbout() },
+            onQuit: { [weak self] in self?.quit() }
+        ))
+        host.sizingOptions = .preferredContentSize
+        popover = NSPopover()
+        popover.behavior = .transient
+        popover.contentViewController = host
+        popover.delegate = self
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
+            popover.performClose(nil)
+            statusItem.menu = statusMenu
+            sender.performClick(nil)
+            statusItem.menu = nil
+        } else if popover.isShown {
+            popover.performClose(nil)
+        } else {
+            showChargerInfo()
+        }
+    }
+
+    private func showChargerInfo() {
+        guard let button = statusItem.button else { return }
+        ChargerInfoModel.shared.start()
+        NSApp.activate()
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        ChargerInfoModel.shared.stop()
     }
 
     private func updateTitle(_ snapshot: PowerSnapshot, _ showPercent: Bool) {
